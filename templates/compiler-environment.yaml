@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Establish a host in EC2 for compiling an executable to deploy within a Lambda function.
+Parameters:
+  Ec2KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description": Enter the name of an EC2 keypair for use with this EC2 instance.
+  EcsClusterPublicSubnet:
+    Type: AWS::EC2::Subnet::Id
+    Description: Choose the public subnet of the cluster into which to place the instance.
+  BastionRoleName:
+    Type: String
+    Description: Enter the name of the role to be applied to instance.
+  Vpc:
+    Type: String
+    Description: Enter the ID of the VPC for the cluster.
+  Mappings:
+    BastionAmiByRegion:
+      us-east-2:
+        Id: ami-c5062ba0
+      us-east-1:
+        Id: ami-8c1be5f6
+      us-west-2:
+        Id: ami-e689729e
+      us-west-1:
+        Id: ami-02eada62
+      eu-west-2:
+        Id: ami-1a7f6d7e
+      eu-west-1:
+        Id: ami-acd005d5
+      eu-central-1:
+        Id: ami-c7ee5ca8
+      ap-northeast-1:
+        Id: ami-2a69be4c
+      ap-southeast-2:
+        Id: ami-8536d6e7
+      ap-southeast-1:
+        Id: ami-0797ea64
+      ca-central-1:
+        Id: ami-fd55ec9
+  Resources:
+    BastionSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Allowed Ports,
+        SecurityGroupIngress:
+          -CidrIp: 0.0.0.0/0
+          IpProtocol: TCP
+          FromPort: 22
+          ToPort: 22
+        VpcId: !Ref EcsClusterVpc
+    Bastion:
+      Type: AWS::EC2::Instance
+      Properties:
+            "KeyName": { "Ref": "Ec2KeyPairName" },
+            "ImageId": { "Fn::FindInMap" : [ "BastionAmiByRegion", { "Ref": "AWS::Region" }, "Id" ] },
+            "InstanceType": "t2.micro",
+            "Monitoring": "false",
+            "SecurityGroupIds" : [{ "Ref": "BastionSecurityGroup" } ],
+            "SubnetId": { "Ref": "EcsClusterPublicSubnet"},
+            "IamInstanceProfile": { "Ref": "BastionRoleName" }
+        }
+    },
+    "BastionEip": {
+        "Type": "AWS::EC2::EIP",
+        "Properties": {
+            "Domain": "vpc"
+        }
+    },
+    "EIPAssociation": {
+        "Type": "AWS::EC2::EIPAssociation",
+        "Properties": {
+            "AllocationId": { "Fn::GetAtt" : ["BastionEip", "AllocationId"] },
+            "InstanceId": { "Ref": "Bastion" }
+        }
+    }
+},
+  "Outputs": {
+  }
+}
