@@ -10,12 +10,14 @@ exports.handler = function (event, context, callback) {
   }
 
   executable.stdout.on('data', (data) => {
-    console.log(`stdout: ${data}`);
+    const output = Buffer.from(data, 'base64').toString('utf8');
+    console.log(`stdout: ${output}`);
     callback(null, data);
   });
 
   executable.stderr.on('data', (data) => {
-    console.log(`stderr: ${data}`);
+    const output = Buffer.from(data, 'base64').toString('utf8');
+    console.log(`stderr: ${output}`);
     callback(data);
   });
 };
